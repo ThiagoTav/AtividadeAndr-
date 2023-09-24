@@ -1,17 +1,44 @@
-# disciplinas/views.py
-from rest_framework import generics
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.views import APIView
 from atividade.models import Aluno
 from atividade.serializers.alunoSerializer import AlunoSerializer
+from django.http import Http404
 
-"""
-Views para listar, criar, detalhar, atualizar e excluir objetos Aluno usando o serializador AlunoSerializer.
-"""
+class AlunoListCreateView(APIView):
+    def get(self, request, format=None):
+        alunos = Aluno.objects.all()
+        serializer = AlunoSerializer(alunos, many=True)
+        return Response(serializer.data)
 
+    def post(self, request, format=None):
+        serializer = AlunoSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class AlunoListCreateView(generics.ListCreateAPIView):
-    queryset = Aluno.objects.all()
-    serializer_class = AlunoSerializer
+class AlunoDetailView(APIView):
+    def get_object(self, pk):
+        try:
+            return Aluno.objects.get(pk=pk)
+        except Aluno.DoesNotExist:
+            raise Http404
 
-class AlunoDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Aluno.objects.all()
-    serializer_class = AlunoSerializer
+    def get(self, request, pk, format=None):
+        aluno = self.get_object(pk)
+        serializer = AlunoSerializer(aluno)
+        return Response(serializer.data)
+
+    def put(self, request, pk, format=None):
+        aluno = self.get_object(pk)
+        serializer = AlunoSerializer(aluno, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk, format=None):
+        aluno = self.get_object(pk)
+        aluno.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
